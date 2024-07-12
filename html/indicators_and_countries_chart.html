@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Record Show Country, Indicator, Starting Date And Ending Date Wise.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: "Ubuntu", sans-serif;
+            font-weight: 400;
+            font-size: 18px;
+            color: #fff;
+
+            h2 {
+                font-size: 32px;
+            }
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(circle, rgba(174, 188, 238, 1) 0%, #000 100%);;
+            display: grid;
+            place-items: center;
+            height: 100dvh;
+            margin-bottom: 200px;
+        }
+
+        .michart,
+        table {
+            height: 100%;
+            max-height: 400px;
+            background-color: white;
+            max-width: 850px;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+            margin: auto;
+            tr {
+                color: aliceblue;
+                border: 1px solid #fff;
+
+            }
+        }
+
+        .michart,
+        table,
+        select,
+        input,
+        button{
+            background: rgba(255, 255, 255, 0.32);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .sub-section {
+            display: flex;
+            padding: 5px;
+            width: 500px;
+            justify-content: space-between;
+
+        }
+
+        select,
+        input{
+            margin: 10px;
+            padding: 5px;
+            width: 200px;
+            border-radius: 5px;
+            padding: 10px 5px;
+            border: 3px solid #c3d7e5;
+            box-shadow: 0px 15px 20px 0px #00000033, 0px 5px 10px #00000033;
+        }
+
+        option {
+            color: #000;
+        }
+
+        .parsley-errors-list.filled {
+            padding: 0px 10px;
+        }
+
+
+        div.scrolling-limit {
+            width: 100%;
+            height: 20px;
+            /* background-color: rgb(0, 0, 0); */
+            overflow: hidden;
+            white-space: nowrap;
+
+        }
+
+        div#scrolling {
+            position: relative;
+            display: flex;
+            -webkit-animation: scroll 20s infinite linear;
+            -moz-animation: scroll 20s infinite linear;
+            -o-animation: scroll 20s infinite linear;
+            animation: scroll 20s infinite linear;
+        }
+        form,.select-changes{
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        @keyframes scroll {
+            0% {
+                left: 100%;
+            }
+
+            100% {
+                left: -950px;
+            }
+        }
+
+        @-webkit-keyframes scroll {
+            0% {
+                left: 100%;
+            }
+
+            100% {
+                left: -950px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="scrolling-limit">
+        <div id="scrolling">
+        </div>
+    </div>
+    <h2>Historical Record Show Country, Indicator And Date.</h3>
+        <form action="" data-parsley-validate="">
+            <div class="sub-section">
+                <div>
+                    <select id="country-select" onchange="fetchData()" required=""
+                        data-parsley-required-message="Please Select Country" data-parsley-trigger="change">
+                        <option value="">--Select Country--</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="indicator-select" onchange="fetchData()" required=""
+                        data-parsley-required-message="Please Select Indicator" data-parsley-trigger="change">
+                        <option value="">--Select Indicator--</option>
+                    </select>
+                </div>
+            </div>
+            <div class="sub-section">
+                <div>
+                    <input type="date" id="end-date" value="2018-01-01" placeholder="Starting Date"
+                        onchange="fetchData()" required="" data-parsley-required-message="Please Select Starting Date"
+                        data-parsley-trigger="change">
+                </div>
+                <div>
+                    <input type="date" id="start-date" value="" placeholder="Ending Date" onchange="fetchData()" required=""
+                        data-parsley-required-message="Please Select Ending Date" data-parsley-trigger="change">
+                </div>
+            </div>
+        </form>
+
+        <h2>Historical Chart</h2>
+        <div class='michart'>
+            <canvas id="myChart"></canvas>
+        </div>
+
+
+        <h2>Chart Record Details</h2>
+        <table id="data-table" border="1">
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>Category</th>
+                    <th>DateTime</th>
+                    <th>Value</th>
+                    <th>Frequency</th>
+                    <th>HistoricalDataSymbol</th>
+                    <th>LastUpdate</th>
+                </tr>
+            </thead>
+            <tbody>
+                <div id="data_cnt"></div>
+                <!-- Data rows will be inserted here -->
+            </tbody>
+        </table>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            let chartInstance = null;
+            let API_URL = "https://api.tradingeconomics.com";
+            let API_KEY = "fcfe66ab02c2494:p4uktpkwlbyduqb";
+            const enabledCountries = ['New Zealand', 'Thailand'];
+            const enabledIndicators = ['Central Bank Balance Sheet', 'GDP','Population', 'Changes in Inventories','Corruption Rank'];
+            // Function to get today's date in YYYY-MM-DD format
+            function getCurrentDate() {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                let mm = today.getMonth() + 1; // Months start at 0!
+                let dd = today.getDate();
+
+                if (dd < 10) dd = '0' + dd;
+                if (mm < 10) mm = '0' + mm;
+
+                return yyyy + '-' + mm + '-' + dd;
+            }
+            document.getElementById('start-date').value = getCurrentDate();
+            fetchCountries();
+            // get countries
+            async function fetchCountries() {
+                const response = await fetch(API_URL + `/country?c=${API_KEY}`);
+                const countries = await response.json();
+                const countrySelect = document.getElementById('country-select');
+
+                countries.forEach(country => {
+                    if (enabledCountries.includes(country.Country)) {
+                        const option = document.createElement('option');
+                        option.value = country.Country;
+                        option.textContent = country.Country;
+                        countrySelect.appendChild(option);
+                    }
+                });
+                setTimeout(() => {
+                    fetchIndicators();
+                }, 1000)
+            }
+            // Get indicator 
+            async function fetchIndicators() {
+                const response = await fetch(API_URL + `/indicators?c=${API_KEY}`);
+                const indicators = await response.json();
+                const indicatorSelect = document.getElementById('indicator-select');
+
+                indicators.forEach(indicator => {
+                    if (enabledIndicators.includes(indicator.Category)) {
+                        const option = document.createElement('option');
+                        option.value = indicator.Category;
+                        option.textContent = indicator.Category;
+                        indicatorSelect.appendChild(option);
+                    }
+                });
+            }
+            // Fetch Record 
+            async function fetchData() {
+                const country = document.getElementById('country-select').value;
+                const indicator = document.getElementById('indicator-select').value;
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                // const displayElement = document.querySelector('.select-changes');
+                // displayElement.innerHTML = `
+                //     <h5><strong>Country:</strong> ${country}</h5>
+                //     <h5><strong>Indicator:</strong> ${indicator}</h5>
+                //     <h5><strong>Start Date:</strong> ${startDate}</h5>
+                //     <h5><strong>End Date:</strong> ${endDate}</h5>
+                // `;
+                if (country && indicator && startDate && endDate) {
+                    const response = await fetch(API_URL + `/historical/country/${country}/indicator/${indicator}/${endDate}/${startDate}?c=${API_KEY}`);
+                    const data = await response.json();
+                    populateTable(data, country);
+                }
+            }
+            // show Response Data 
+            function populateTable(data, country) {
+                const tableBody = document.getElementById('data-table').querySelector('tbody');
+                tableBody.innerHTML = '';
+                let chartData = [];
+                data.forEach(record => {
+                    if (record.Country == country) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                        <td>${record.Country}</td>
+                        <td>${record.Category}</td>
+                        <td>${formatDate(record.DateTime)}</td>
+                        <td>${record.Value}</td>
+                        <td>${record.Frequency}</td>
+                        <td>${record.HistoricalDataSymbol}</td>
+                        <td>${formatDate(record.LastUpdate)}</td>
+                    `;
+                        chartData.push(record);
+                        tableBody.appendChild(row);
+                    }
+                });
+                createChart(chartData);
+            }
+            // chart show 
+            function createChart(data) {
+                const labels = data.map(record => formatDate(record.DateTime));
+                const values = data.map(record => record.Value);
+                const ctx = document.getElementById('myChart').getContext('2d');
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: data[0].Category,
+                            data: values,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            //Date Format function  
+            function formatDate(inputDate) {
+                const date = new Date(inputDate);
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+
+            var key = "guest",
+                secret = "guest",
+                count = 0;
+            var host = window.document.location.host.replace(/:.*/, "");
+            var ws = new WebSocket(
+                "wss://stream.tradingeconomics.com/?client=" + key + ":" + secret
+            );
+
+            ws.onmessage = function(event) {
+                count++;
+                if (count >= 5) {
+                    document.getElementById("scrolling").innerHTML = "";
+                    count = 0;
+                }
+
+                const data = JSON.parse(event.data); // Parse the JSON data
+                displayStringRecords(data);
+            };
+
+            ws.onopen = function() {
+                // Subscribe to a topic:
+                ws.send('{"topic": "subscribe", "to": "EURUSD:CUR"}');
+            };
+
+            // Function to display JSON records with only string fields
+            function displayStringRecords(record) {
+                const container = document.getElementById('scrolling');
+                const recordDiv = document.createElement('div');
+                Object.keys(record).forEach(key => {
+                    if (typeof record[key] === 'string'|| key === "price") {
+                        const fieldP = document.createElement('span');
+                        fieldP.innerHTML = `<strong>${key}</strong> : <span>${record[key]} </span> &nbsp; &nbsp;`;
+                        container.appendChild(fieldP);
+                    }
+                });
+                container.appendChild(recordDiv);
+            }
+            
+            document.querySelector('form').addEventListener('submit', function(e) {
+                e.preventDefault();
+            });
+        </script>
+</body>
+
+</html>
